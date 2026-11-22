@@ -4,41 +4,60 @@
 <style>
 body{font-family:sans-serif;background:#111;color:#fff;text-align:center;padding:16px}
 button{display:block;width:100%;margin:8px 0;padding:14px;font-size:20px;border:0;border-radius:10px;background:#2a6;color:#fff}
-#seq{font-size:28px;margin:24px 0}
+button.b{background:#555}
+#qt{font-size:26px;margin:20px 0}
+#tm{color:#fc3;font-size:20px}
 </style></head><body>
-<h2>MindForge</h2>
-<div id="info"></div><div id="seq"></div><div id="opts"></div><div id="msg"></div>
+<h2>MindForge</h2><div id="app"></div>
 <script>
-let lvl=+(localStorage.getItem("mf_lvl")||1),q=0,right=0,times=[],t0=0,ans=0;
+window.GAMES=[];
+const TYPES={logic:"Logic",observe:"Observation",speed:"Speed",deep:"Deep",business:"Business"};
 function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a}
-function makeSeq(l){
- let t=l<=10?0:l<=30?rnd(0,2):rnd(0,4),a=rnd(1,9),d=rnd(2,3+Math.min(l,12)),s=[];
- if(t==0)for(let i=0;i<6;i++)s.push(a+d*i);
- else if(t==1)for(let i=0;i<6;i++)s.push((a%5+1)*Math.pow(2,i));
- else if(t==2)for(let i=0;i<6;i++)s.push((i+a)*(i+a));
- else if(t==3){s=[a,rnd(1,9)];for(let i=2;i<6;i++)s.push(s[i-1]+s[i-2]);}
- else{let e=rnd(1,d-1);s=[a];for(let i=1;i<6;i++)s.push(s[i-1]+(i%2?d:-e));}
- return s;
+function diff(l){return l<=30?l:30+(l-30)*0.5}
+let timed=false,cur=null,lvl=1,q=0,right=0,times=[],t0=0,cq=null,tm=null;
+function ui(h){document.getElementById("app").innerHTML=h}
+function key(g){return "mf_"+g.type+"_"+g.name}
+function getLvl(g){return +(localStorage.getItem(key(g))||1)}
+function home(){
+ ui(Object.keys(TYPES).map(t=>"<button onclick=\"openType('"+t+"')\">"+TYPES[t]+" ("+GAMES.filter(g=>g.type==t).length+"/10 games)</button>").join("")+
+ "<button class='b' onclick='toggleTimed()'>Timed mode: "+(timed?"ON":"OFF")+"</button>");
 }
-function show(id,h){document.getElementById(id).innerHTML=h}
+function toggleTimed(){timed=!timed;home()}
+function openType(t){
+ let list=GAMES.filter(g=>g.type==t);
+ ui("<h3>"+TYPES[t]+"</h3>"+(list.length?list.map(g=>"<button onclick='play("+GAMES.indexOf(g)+")'>"+g.name+" - Level "+getLvl(g)+"</button>").join(""):"<p>Games jaldi aayenge</p>")+"<button class='b' onclick='home()'>Peeche</button>");
+}
+function play(i){cur=GAMES[i];lvl=getLvl(cur);q=0;right=0;times=[];next()}
 function next(){
  if(q==5){finish();return}
- let s=makeSeq(lvl);ans=s[5];
- let o=[ans];while(o.length<4){let w=ans+rnd(-8,8);if(w>0&&!o.includes(w))o.push(w)}
- o.sort(()=>Math.random()-0.5);
- show("info","Level "+lvl+(lvl<=3?" (Trial)":"")+" | Sawal "+(q+1)+"/5");
- show("seq",s.slice(0,5).join(", ")+", ?");
- show("opts",o.map(v=>"<button onclick='pick("+v+")'>"+v+"</button>").join(""));
- show("msg","");t0=Date.now();
+ cq=cur.make(diff(lvl));
+ let o=cq.opts.slice().sort(()=>Math.random()-0.5);
+ ui("<div>"+cur.name+" | Level "+lvl+(lvl<=3?" (Trial)":"")+" | Sawal "+(q+1)+"/5</div><div id='tm'></div><div id='qt'>"+cq.text+"</div>"+o.map(v=>"<button data-v='"+v+"' onclick='pick(this.dataset.v)'>"+v+"</button>").join(""));
+ t0=Date.now();
+ if(timed){
+  let left=Math.max(3,Math.round(15-diff(lvl)*0.12));
+  document.getElementById("tm").innerText="Time: "+left;
+  tm=setInterval(function(){left--;document.getElementById("tm").innerText="Time: "+left;if(left<=0)pick(null)},1000);
+ }
 }
-function pick(v){times.push((Date.now()-t0)/1000);if(v==ans)right++;q++;next()}
+function pick(v){
+ clearInterval(tm);
+ times.push((Date.now()-t0)/1000);
+ if(v!==null&&String(v)===String(cq.ans))right++;
+ q++;next();
+}
 function finish(){
  let avg=(times.reduce((a,b)=>a+b,0)/5).toFixed(1),slow=Math.max(...times).toFixed(1);
- let up=right>=4;if(up){lvl++;localStorage.setItem("mf_lvl",lvl)}
- show("info","Analysis");show("seq","");
- show("opts","<button onclick='start()'>"+(up?"Agla Level":"Dobara Try")+"</button>");
- show("msg","Sahi: "+right+"/5<br>Accuracy: "+(right*20)+"%<br>Average time: "+avg+" sec<br>Sabse slow: "+slow+" sec<br>"+(up?"Level pass!":"Pass hone ke liye 4 sahi chahiye"));
+ let up=right>=4;
+ if(up)localStorage.setItem(key(cur),lvl+1);
+ ui("<h3>Analysis</h3><div id='qt'>Sahi: "+right+"/5<br>Accuracy: "+(right*20)+"%<br>Average time: "+avg+" sec<br>Sabse slow: "+slow+" sec<br>"+(up?"Level pass!":"Pass hone ke liye 4 sahi chahiye")+"</div>"+
+ "<button onclick='play("+GAMES.indexOf(cur)+")'>"+(up?"Agla Level":"Dobara Try")+"</button><button class='b' onclick='openType(\""+cur.type+"\")'>Games list</button>");
 }
-function start(){q=0;right=0;times=[];next()}
-start();
-</script></body></html>
+</script>
+<script src="logic.js"></script>
+<script src="observe.js"></script>
+<script src="speed.js"></script>
+<script src="deep.js"></script>
+<script src="business.js"></script>
+<script>home()</script>
+</body></html>
