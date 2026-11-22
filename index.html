@@ -1,1 +1,44 @@
-
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MindForge</title>
+<style>
+body{font-family:sans-serif;background:#111;color:#fff;text-align:center;padding:16px}
+button{display:block;width:100%;margin:8px 0;padding:14px;font-size:20px;border:0;border-radius:10px;background:#2a6;color:#fff}
+#seq{font-size:28px;margin:24px 0}
+</style></head><body>
+<h2>MindForge</h2>
+<div id="info"></div><div id="seq"></div><div id="opts"></div><div id="msg"></div>
+<script>
+let lvl=+(localStorage.getItem("mf_lvl")||1),q=0,right=0,times=[],t0=0,ans=0;
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function makeSeq(l){
+ let t=l<=10?0:l<=30?rnd(0,2):rnd(0,4),a=rnd(1,9),d=rnd(2,3+Math.min(l,12)),s=[];
+ if(t==0)for(let i=0;i<6;i++)s.push(a+d*i);
+ else if(t==1)for(let i=0;i<6;i++)s.push((a%5+1)*Math.pow(2,i));
+ else if(t==2)for(let i=0;i<6;i++)s.push((i+a)*(i+a));
+ else if(t==3){s=[a,rnd(1,9)];for(let i=2;i<6;i++)s.push(s[i-1]+s[i-2]);}
+ else{let e=rnd(1,d-1);s=[a];for(let i=1;i<6;i++)s.push(s[i-1]+(i%2?d:-e));}
+ return s;
+}
+function show(id,h){document.getElementById(id).innerHTML=h}
+function next(){
+ if(q==5){finish();return}
+ let s=makeSeq(lvl);ans=s[5];
+ let o=[ans];while(o.length<4){let w=ans+rnd(-8,8);if(w>0&&!o.includes(w))o.push(w)}
+ o.sort(()=>Math.random()-0.5);
+ show("info","Level "+lvl+(lvl<=3?" (Trial)":"")+" | Sawal "+(q+1)+"/5");
+ show("seq",s.slice(0,5).join(", ")+", ?");
+ show("opts",o.map(v=>"<button onclick='pick("+v+")'>"+v+"</button>").join(""));
+ show("msg","");t0=Date.now();
+}
+function pick(v){times.push((Date.now()-t0)/1000);if(v==ans)right++;q++;next()}
+function finish(){
+ let avg=(times.reduce((a,b)=>a+b,0)/5).toFixed(1),slow=Math.max(...times).toFixed(1);
+ let up=right>=4;if(up){lvl++;localStorage.setItem("mf_lvl",lvl)}
+ show("info","Analysis");show("seq","");
+ show("opts","<button onclick='start()'>"+(up?"Agla Level":"Dobara Try")+"</button>");
+ show("msg","Sahi: "+right+"/5<br>Accuracy: "+(right*20)+"%<br>Average time: "+avg+" sec<br>Sabse slow: "+slow+" sec<br>"+(up?"Level pass!":"Pass hone ke liye 4 sahi chahiye"));
+}
+function start(){q=0;right=0;times=[];next()}
+start();
+</script></body></html>
